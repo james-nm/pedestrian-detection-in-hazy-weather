@@ -2,7 +2,7 @@ import tensorflow as tf
 from model.backbone.vgg16 import vgg_16
 from model.attention_module import *
 
-slim = tf.contrib.slim
+import tf_slim as slim
 
 def prioriboxes_vgg(inputs, attention_module, is_training, bboxs_each_cell=2, input_check=False):
     """ the whole model is inspried by yolov2, what makes our model different
@@ -32,25 +32,25 @@ def prioriboxes_vgg(inputs, attention_module, is_training, bboxs_each_cell=2, in
         net = attention_module(net, name="select")
 
     ## the additional conv layers##
-    with tf.variable_scope("clf_det_layers"):
+    with tf.compat.v1.variable_scope("clf_det_layers"):
         # each bboxs need 6 attribute to describe, means [y_t, x_t, h_t, w_t, bg_socre, obj_score]
         conv_channel_config = [180, 90, 30, bboxs_each_cell * 6]
         for channel in conv_channel_config:
             with slim.arg_scope([slim.conv2d],
-                                weights_regularizer=tf.contrib.layers.l2_regularizer(1e-4),
+                                weights_regularizer=tf.keras.regularizers.l2(0.5 * (1e-4)),
                                 activation_fn=None):
                 net = slim.conv2d(net, channel, [1, 1])
                 net = slim.batch_norm(net, is_training=is_training, activation_fn=tf.nn.leaky_relu)
                 net = slim.conv2d(net, channel, [3, 3])
                 net = slim.batch_norm(net, is_training=is_training, activation_fn=tf.nn.leaky_relu)
         net = slim.batch_norm(net, is_training=is_training, activation_fn=None)
-        net = tf.reshape(net, shape=[tf.shape(inputs)[0], -1, 6])
-        sz = tf.shape(net)
+        net = tf.reshape(net, shape=[tf.shape(input=inputs)[0], -1, 6])
+        sz = tf.shape(input=net)
         det_out = tf.slice(net, begin=[0, 0, 0], size=[sz[0], sz[1], 4])  # [y_t, x_t, h_t, w_t]
         clf_out = tf.slice(net, begin=[0, 0, 4], size=[sz[0], sz[1], 2])  # [bg_socre, obj_score]
     return det_out, clf_out
 
 
 if __name__ == '__main__':
-    imgs = tf.placeholder(tf.float32, shape=(None, 224, 224, 3))
+    imgs = tf.compat.v1.placeholder(tf.float32, shape=(None, 224, 224, 3))
     prioriboxes_vgg(inputs=imgs, attention_module=se_block, is_training=True)

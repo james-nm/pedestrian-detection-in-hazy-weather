@@ -20,52 +20,55 @@ from utils.logging import logger
 
 import config
 
-FLAGS = tf.app.flags.FLAGS
+FLAGS = tf.compat.v1.app.flags.FLAGS
 
-slim = tf.contrib.slim
+# Update:
+tf.compat.v1.disable_eager_execution()
 
-tf.app.flags.DEFINE_string(
+import tf_slim as slim
+
+tf.compat.v1.app.flags.DEFINE_string(
     'model_name', None,
     'The name of the architecture to train.')
 
-tf.app.flags.DEFINE_string(
+tf.compat.v1.app.flags.DEFINE_string(
     'attention_module', None,
     'The name of attention module to apply.')
 
-tf.app.flags.DEFINE_string(
+tf.compat.v1.app.flags.DEFINE_string(
     'checkpoint_dir', '',
     'The full file name to a checkpoint from which to fine-tune.')
 
-tf.app.flags.DEFINE_float(
+tf.compat.v1.app.flags.DEFINE_float(
     'select_threshold', 0.3, 'obj score less than it would be filter')
 
-tf.app.flags.DEFINE_float(
+tf.compat.v1.app.flags.DEFINE_float(
     'nms_threshold', 0.6, 'nms threshold')
 
-tf.app.flags.DEFINE_integer(
+tf.compat.v1.app.flags.DEFINE_integer(
     'keep_top_k', 30, 'maximun num of obj after nms')
 
-tf.app.flags.DEFINE_integer(
+tf.compat.v1.app.flags.DEFINE_integer(
     'vis_img_height', 512, 'the img height when visulize')
 
-tf.app.flags.DEFINE_integer(
+tf.compat.v1.app.flags.DEFINE_integer(
     'vis_img_width', 512, 'the img width when visulize')
 
 #### config only for prioriboxes_mbn ####
-tf.app.flags.DEFINE_string(
+tf.compat.v1.app.flags.DEFINE_string(
     'backbone_name', None,
     'support mobilenet_v1 and mobilenet_v2')
 
-tf.app.flags.DEFINE_boolean(
+tf.compat.v1.app.flags.DEFINE_boolean(
     'multiscale_feats', True,
     'whether merge different scale features')
 
-tf.app.flags.DEFINE_boolean(
+tf.compat.v1.app.flags.DEFINE_boolean(
     'whether_aug', True,
     'whether use augmentation to prediction')
 
 ## define placeholder ##
-inputs = tf.placeholder(tf.float32,
+inputs = tf.compat.v1.placeholder(tf.float32,
                         shape=(None, config.img_size[0], config.img_size[1], 3))
 
 def build_graph(model_name, attention_module, config_dict, is_training):
@@ -99,12 +102,12 @@ def main(_):
     scores, bboxes = build_graph(FLAGS.model_name, FLAGS.attention_module,
                                  config_dict=config_dict, is_training=False)
 
-    saver = tf.train.Saver(tf.global_variables())
+    saver = tf.compat.v1.train.Saver(tf.compat.v1.global_variables())
     ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
 
-    configuretion = tf.ConfigProto()
+    configuretion = tf.compat.v1.ConfigProto()
     configuretion.gpu_options.allow_growth = True
-    with tf.Session(config=configuretion) as sess:
+    with tf.compat.v1.Session(config=configuretion) as sess:
         if ckpt:
             logger.info('loading %s...' % str(ckpt.model_checkpoint_path))
             saver.restore(sess, ckpt.model_checkpoint_path)
@@ -165,7 +168,7 @@ def main(_):
 
 
 if __name__ == '__main__':
-    tf.app.run()
+    tf.compat.v1.app.run()
 
 
 

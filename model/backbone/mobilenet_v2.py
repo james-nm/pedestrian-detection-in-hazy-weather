@@ -9,7 +9,7 @@ def relu(x, name='relu6'):
 
 
 def batch_norm(x, momentum=0.9, epsilon=1e-5, train=True, name='bn'):
-    return tf.layers.batch_normalization(x,
+    return tf.compat.v1.layers.batch_normalization(x,
                       momentum=momentum,
                       epsilon=epsilon,
                       scale=True,
@@ -18,21 +18,21 @@ def batch_norm(x, momentum=0.9, epsilon=1e-5, train=True, name='bn'):
 
 
 def conv2d(input_, output_dim, k_h, k_w, d_h, d_w, stddev=0.02, name='conv2d', bias=False):
-    with tf.variable_scope(name):
-        w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
-              regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
-              initializer=tf.truncated_normal_initializer(stddev=stddev))
-        conv = tf.nn.conv2d(input_, w, strides=[1, d_h, d_w, 1], padding='SAME')
+    with tf.compat.v1.variable_scope(name):
+        w = tf.compat.v1.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
+              regularizer=tf.keras.regularizers.l2(0.5 * (weight_decay)),
+              initializer=tf.compat.v1.truncated_normal_initializer(stddev=stddev))
+        conv = tf.nn.conv2d(input=input_, filters=w, strides=[1, d_h, d_w, 1], padding='SAME')
         if bias:
-            biases = tf.get_variable('bias', [output_dim], initializer=tf.constant_initializer(0.0))
+            biases = tf.compat.v1.get_variable('bias', [output_dim], initializer=tf.compat.v1.constant_initializer(0.0))
             conv = tf.nn.bias_add(conv, biases)
 
-        conv = tf.nn.dropout(conv, keep_prob=keep_prob)
+        conv = tf.nn.dropout(conv, rate=1 - (keep_prob))
         return conv
 
 
 def conv2d_block(input, out_dim, k, s, is_train, name):
-    with tf.name_scope(name), tf.variable_scope(name):
+    with tf.compat.v1.name_scope(name), tf.compat.v1.variable_scope(name):
         net = conv2d(input, out_dim, k, k, s, s, name='conv2d')
         net = batch_norm(net, train=is_train, name='bn')
         net = relu(net)
@@ -40,14 +40,14 @@ def conv2d_block(input, out_dim, k, s, is_train, name):
 
 
 def conv_1x1(input, output_dim, name, bias=False):
-    with tf.name_scope(name):
+    with tf.compat.v1.name_scope(name):
         conv = conv2d(input, output_dim, 1,1,1,1, stddev=0.02, name=name, bias=bias)
-        conv = tf.nn.dropout(conv, keep_prob=keep_prob)
+        conv = tf.nn.dropout(conv, rate=1 - (keep_prob))
         return conv
 
 
 def pwise_block(input, output_dim, is_train, name, bias=False):
-    with tf.name_scope(name), tf.variable_scope(name):
+    with tf.compat.v1.name_scope(name), tf.compat.v1.variable_scope(name):
         out=conv_1x1(input, output_dim, bias=bias, name='pwb')
         out=batch_norm(out, train=is_train, name='bn')
         out=relu(out)
@@ -56,22 +56,22 @@ def pwise_block(input, output_dim, is_train, name, bias=False):
 
 def dwise_conv(input, k_h=3, k_w=3, channel_multiplier= 1, strides=[1,1,1,1],
                padding='SAME', stddev=0.02, name='dwise_conv', bias=False):
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
         in_channel=input.get_shape().as_list()[-1]
-        w = tf.get_variable('w', [k_h, k_w, in_channel, channel_multiplier],
-                        regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
-                        initializer=tf.truncated_normal_initializer(stddev=stddev))
-        conv = tf.nn.depthwise_conv2d(input, w, strides, padding, rate=None,name=None,data_format=None)
+        w = tf.compat.v1.get_variable('w', [k_h, k_w, in_channel, channel_multiplier],
+                        regularizer=tf.keras.regularizers.l2(0.5 * (weight_decay)),
+                        initializer=tf.compat.v1.truncated_normal_initializer(stddev=stddev))
+        conv = tf.nn.depthwise_conv2d(input=input, filter=w, strides=strides, padding=padding, dilations=None,name=None,data_format=None)
         if bias:
-            biases = tf.get_variable('bias', [in_channel*channel_multiplier], initializer=tf.constant_initializer(0.0))
+            biases = tf.compat.v1.get_variable('bias', [in_channel*channel_multiplier], initializer=tf.compat.v1.constant_initializer(0.0))
             conv = tf.nn.bias_add(conv, biases)
 
-        conv = tf.nn.dropout(conv, keep_prob=keep_prob)
+        conv = tf.nn.dropout(conv, rate=1 - (keep_prob))
         return conv
 
 
 def res_block(input, expansion_ratio, output_dim, stride, is_train, name, bias=False, shortcut=True):
-    with tf.name_scope(name), tf.variable_scope(name):
+    with tf.compat.v1.name_scope(name), tf.compat.v1.variable_scope(name):
         # pw
         bottleneck_dim=round(expansion_ratio*input.get_shape().as_list()[-1])
         net = conv_1x1(input, bottleneck_dim, name='pw', bias=bias)
@@ -98,29 +98,29 @@ def res_block(input, expansion_ratio, output_dim, stride, is_train, name, bias=F
 
 
 def separable_conv(input, k_size, output_dim, stride, pad='SAME', channel_multiplier=1, name='sep_conv', bias=False):
-    with tf.name_scope(name), tf.variable_scope(name):
+    with tf.compat.v1.name_scope(name), tf.compat.v1.variable_scope(name):
         in_channel = input.get_shape().as_list()[-1]
-        dwise_filter = tf.get_variable('dw', [k_size, k_size, in_channel, channel_multiplier],
-                  regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
-                  initializer=tf.truncated_normal_initializer(stddev=0.02))
+        dwise_filter = tf.compat.v1.get_variable('dw', [k_size, k_size, in_channel, channel_multiplier],
+                  regularizer=tf.keras.regularizers.l2(0.5 * (weight_decay)),
+                  initializer=tf.compat.v1.truncated_normal_initializer(stddev=0.02))
 
-        pwise_filter = tf.get_variable('pw', [1, 1, in_channel*channel_multiplier, output_dim],
-                  regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
-                  initializer=tf.truncated_normal_initializer(stddev=0.02))
+        pwise_filter = tf.compat.v1.get_variable('pw', [1, 1, in_channel*channel_multiplier, output_dim],
+                  regularizer=tf.keras.regularizers.l2(0.5 * (weight_decay)),
+                  initializer=tf.compat.v1.truncated_normal_initializer(stddev=0.02))
         strides = [1,stride, stride,1]
 
-        conv=tf.nn.separable_conv2d(input,dwise_filter,pwise_filter,strides,padding=pad, name=name)
+        conv=tf.nn.separable_conv2d(input=input,depthwise_filter=dwise_filter,pointwise_filter=pwise_filter,strides=strides,padding=pad, name=name)
         if bias:
-            biases = tf.get_variable('bias', [output_dim],initializer=tf.constant_initializer(0.0))
+            biases = tf.compat.v1.get_variable('bias', [output_dim],initializer=tf.compat.v1.constant_initializer(0.0))
             conv = tf.nn.bias_add(conv, biases)
 
-        conv = tf.nn.dropout(conv, keep_prob=keep_prob)
+        conv = tf.nn.dropout(conv, rate=1 - (keep_prob))
         return conv
 
 
 def global_avg(x):
-    with tf.name_scope('global_avg'):
-        net=tf.layers.average_pooling2d(x, x.get_shape()[1:-1], 1)
+    with tf.compat.v1.name_scope('global_avg'):
+        net=tf.compat.v1.layers.average_pooling2d(x, x.get_shape()[1:-1], 1)
         return net
 
 
@@ -131,7 +131,7 @@ def flatten(x):
 
 def pad2d(inputs, pad=(0, 0), mode='CONSTANT'):
     paddings = [[0, 0], [pad[0], pad[0]], [pad[1], pad[1]], [0, 0]]
-    net = tf.pad(inputs, paddings, mode=mode)
+    net = tf.pad(tensor=inputs, paddings=paddings, mode=mode)
     return net
 
 def mobilenetv2(inputs, is_training):
@@ -144,7 +144,7 @@ def mobilenetv2(inputs, is_training):
     """
     endPoints = collections.OrderedDict()
     exp = 6  # expansion ratio
-    with tf.variable_scope('mobilenetv2'):
+    with tf.compat.v1.variable_scope('mobilenetv2'):
         net = conv2d_block(inputs, 32, 3, 2, is_training, name='conv1_1')  # size/2
         endPoints['layer_1'] = net
 

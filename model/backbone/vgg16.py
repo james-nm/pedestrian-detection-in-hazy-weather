@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-slim = tf.contrib.slim
+import tf_slim as slim
 
 
 def vgg_arg_scope(weight_decay=0.0005):
@@ -14,8 +14,8 @@ def vgg_arg_scope(weight_decay=0.0005):
   """
   with slim.arg_scope([slim.conv2d, slim.fully_connected],
                       activation_fn=tf.nn.relu,
-                      weights_regularizer=slim.l2_regularizer(weight_decay),
-                      biases_initializer=tf.zeros_initializer()):
+                      weights_regularizer=tf.keras.regularizers.l2(0.5 * (weight_decay)),
+                      biases_initializer=tf.compat.v1.zeros_initializer()):
     with slim.arg_scope([slim.conv2d], padding='SAME') as arg_sc:
       return arg_sc
 
@@ -33,13 +33,13 @@ def vgg_16(inputs, is_training, scope='vgg_16'):
         net: the output of the last layer
         end_points: a dict of tensors with intermediate activations.
     """
-    with tf.variable_scope(scope, 'vgg_16', [inputs]) as sc:
+    with tf.compat.v1.variable_scope(scope, 'vgg_16', [inputs]) as sc:
         end_points_collection = sc.original_name_scope + '_end_points'
         # Collect outputs for conv2d, fully_connected and max_pool2d.
         with slim.arg_scope([slim.conv2d, slim.batch_norm, slim.max_pool2d],
                             outputs_collections=end_points_collection,):
             with slim.arg_scope([slim.conv2d],
-                            weights_regularizer=slim.l2_regularizer(0.0005) ):
+                            weights_regularizer=tf.keras.regularizers.l2(0.5 * (0.0005)) ):
                 net = slim.repeat(inputs, 2, slim.conv2d, 64, [3, 3],
                                 normalizer_fn=slim.batch_norm,
                                 normalizer_params={'is_training': is_training,

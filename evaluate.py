@@ -20,23 +20,23 @@ from utils.logging import logger
 import config
 
 
-FLAGS = tf.app.flags.FLAGS
+FLAGS = tf.compat.v1.app.flags.FLAGS
 
-slim = tf.contrib.slim
+import tf_slim as slim
 
 # tf.app.flags.DEFINE_string(
 #     'dataset_name', 'inria_person',
 #     'The name of the dataset to train, can be hazy_person, inria_person')
 
-tf.app.flags.DEFINE_string(
+tf.compat.v1.app.flags.DEFINE_string(
     'model_name', 'prioriboxes_mbn',
     'The name of the architecture to train.')
 
-tf.app.flags.DEFINE_string(
+tf.compat.v1.app.flags.DEFINE_string(
     'attention_module', 'se_block',
     'The name of attention module to apply.')
 
-tf.app.flags.DEFINE_string(
+tf.compat.v1.app.flags.DEFINE_string(
     'checkpoint_dir', './checkpoint/hazy',
     'The path to a checkpoint from which to fine-tune.')
 
@@ -54,33 +54,33 @@ tf.app.flags.DEFINE_string(
 #     'The path to a checkpoint from which to fine-tune.')
 
 
-tf.app.flags.DEFINE_float(
+tf.compat.v1.app.flags.DEFINE_float(
     'select_threshold', 0.3, 'obj score less than it would be filter')
 
-tf.app.flags.DEFINE_float(
+tf.compat.v1.app.flags.DEFINE_float(
     'nms_threshold', 0.6, 'nms threshold')
 
-tf.app.flags.DEFINE_integer(
+tf.compat.v1.app.flags.DEFINE_integer(
     'keep_top_k', 30, 'maximun num of obj after nms')
 
-tf.app.flags.DEFINE_integer(
+tf.compat.v1.app.flags.DEFINE_integer(
     'compare_img_height', 224, 'the img height when compare with ground truth')
 
-tf.app.flags.DEFINE_integer(
+tf.compat.v1.app.flags.DEFINE_integer(
     'compare_img_width', 224, 'the img width when compare with ground truth')
 
 
 #### config only for prioriboxes_mbn ####
-tf.app.flags.DEFINE_string(
+tf.compat.v1.app.flags.DEFINE_string(
     'backbone_name', 'mobilenet_v2',
     'support mobilenet_v1 and mobilenet_v2')
 
-tf.app.flags.DEFINE_boolean(
+tf.compat.v1.app.flags.DEFINE_boolean(
     'multiscale_feats', True,
     'whether merge different scale features')
 
 ## define placeholder ##
-inputs = tf.placeholder(tf.float32,
+inputs = tf.compat.v1.placeholder(tf.float32,
                         shape=(None, config.img_size[0], config.img_size[1], 3))
 
 
@@ -121,12 +121,12 @@ def main(_):
     scores, bboxes = build_graph(FLAGS.model_name, FLAGS.attention_module, is_training=False,
                                  config_dict=config_dict)
 
-    saver = tf.train.Saver(tf.global_variables())
+    saver = tf.compat.v1.train.Saver(tf.compat.v1.global_variables())
     ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
 
-    conf = tf.ConfigProto()
+    conf = tf.compat.v1.ConfigProto()
     conf.gpu_options.allow_growth = True
-    with tf.Session(config=conf) as sess:
+    with tf.compat.v1.Session(config=conf) as sess:
         if ckpt:
             logger.info('loading %s...' % str(ckpt.model_checkpoint_path))
             saver.restore(sess, ckpt.model_checkpoint_path)
@@ -165,7 +165,7 @@ def main(_):
                 file.close()
                 pass
             else:
-                tf.logging.info("Finish detection results, please cd into './evaluation' and run eval_tools.py")
+                tf.compat.v1.logging.info("Finish detection results, please cd into './evaluation' and run eval_tools.py")
                 break
 
         avg_time = np.mean(np.array(time_l))
@@ -173,7 +173,7 @@ def main(_):
 
 
 if __name__ == '__main__':
-    tf.app.run()
+    tf.compat.v1.app.run()
 
 
 

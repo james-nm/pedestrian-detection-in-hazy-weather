@@ -103,13 +103,13 @@ def bboxes_select(predictions_layer, localizations_layer,
         size Batches X N x 1 | 4. Each key corresponding to a class.
     """
     select_threshold = 0.0 if select_threshold is None else select_threshold
-    with tf.name_scope(scope, 'bboxes_select_layer',
+    with tf.compat.v1.name_scope(scope, 'bboxes_select_layer',
                        [predictions_layer, localizations_layer]):
         # Reshape features: Batches x N x N_labels | 4
-        p_shape = tf.shape(predictions_layer)
+        p_shape = tf.shape(input=predictions_layer)
         predictions_layer = tf.reshape(predictions_layer,
                                        tf.stack([p_shape[0], -1, p_shape[-1]]))
-        l_shape = tf.shape(localizations_layer)
+        l_shape = tf.shape(input=localizations_layer)
         localizations_layer = tf.reshape(localizations_layer,
                                          tf.stack([l_shape[0], -1, l_shape[-1]]))
 
@@ -143,7 +143,7 @@ def bboxes_sort(scores, bboxes, top_k=20, scope=None):
     """
     # Dictionaries as inputs.
     if isinstance(scores, dict) or isinstance(bboxes, dict):
-        with tf.name_scope(scope, 'bboxes_sort_dict'):
+        with tf.compat.v1.name_scope(scope, 'bboxes_sort_dict'):
             d_scores = {}
             d_bboxes = {}
             for c in scores.keys():
@@ -153,7 +153,7 @@ def bboxes_sort(scores, bboxes, top_k=20, scope=None):
             return d_scores, d_bboxes
 
     # Tensors inputs.
-    with tf.name_scope(scope, 'bboxes_sort', [scores, bboxes]):
+    with tf.compat.v1.name_scope(scope, 'bboxes_sort', [scores, bboxes]):
         # Sort scores...
         scores, idxes = tf.nn.top_k(scores, k=top_k, sorted=True)
 
@@ -190,7 +190,7 @@ def bboxes_nms_batch(scores, bboxes, nms_threshold=0.5, keep_top_k=200,
     """
     # Dictionaries as inputs.
     if isinstance(scores, dict) or isinstance(bboxes, dict):
-        with tf.name_scope(scope, 'bboxes_nms_batch_dict'):
+        with tf.compat.v1.name_scope(scope, 'bboxes_nms_batch_dict'):
             d_scores = {}
             d_bboxes = {}
             for c in scores.keys():
@@ -202,7 +202,7 @@ def bboxes_nms_batch(scores, bboxes, nms_threshold=0.5, keep_top_k=200,
             return d_scores, d_bboxes
 
     # Tensors inputs.
-    with tf.name_scope(scope, 'bboxes_nms_batch'):
+    with tf.compat.v1.name_scope(scope, 'bboxes_nms_batch'):
         r = tf.map_fn(lambda x: bboxes_nms(x[0], x[1],
                                            nms_threshold, keep_top_k),
                       (scores, bboxes),
@@ -229,7 +229,7 @@ def bboxes_nms(scores, bboxes, nms_threshold=0.5, keep_top_k=200, scope=None):
       classes, scores, bboxes Tensors, sorted by score.
         Padded with zero if necessary.
     """
-    with tf.name_scope(scope, 'bboxes_nms_single', [scores, bboxes]):
+    with tf.compat.v1.name_scope(scope, 'bboxes_nms_single', [scores, bboxes]):
         # Apply NMS algorithm.
         idxes = tf.image.non_max_suppression(bboxes, scores,
                                              keep_top_k, nms_threshold)
@@ -255,7 +255,7 @@ def pad_axis(x, offset, size, axis=0, name=None):
       Padded tensor whose dimension on `axis` is `size`, or greater if
       the input vector was larger.
     """
-    with tf.name_scope(name, 'pad_axis'):
+    with tf.compat.v1.name_scope(name, 'pad_axis'):
         shape = get_shape(x)
         rank = len(shape)
         # Padding description.
@@ -263,7 +263,7 @@ def pad_axis(x, offset, size, axis=0, name=None):
         pad1 = tf.stack([0]*axis + [offset] + [0]*(rank-axis-1))
         pad2 = tf.stack([0]*axis + [new_size] + [0]*(rank-axis-1))
         paddings = tf.stack([pad1, pad2], axis=1)
-        x = tf.pad(x, paddings, mode='CONSTANT')
+        x = tf.pad(tensor=x, paddings=paddings, mode='CONSTANT')
         # Reshape, to get fully defined shape if possible.
         # TODO: fix with tf.slice
         shape[axis] = size
@@ -290,7 +290,7 @@ def get_shape(x, rank=None):
             rank = len(static_shape)
         else:
             static_shape = x.get_shape().with_rank(rank).as_list()
-        dynamic_shape = tf.unstack(tf.shape(x), rank)
+        dynamic_shape = tf.unstack(tf.shape(input=x), rank)
         return [s if s is not None else d
                 for s, d in zip(static_shape, dynamic_shape)]
 

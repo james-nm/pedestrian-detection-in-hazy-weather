@@ -9,7 +9,7 @@ import tensorflow as tf
 model_map = {"prioriboxes_mbn":prioriboxes_mbn,
              "prioriboxes_vgg":prioriboxes_vgg}
 
-slim = tf.contrib.slim
+import tf_slim as slim
 
 class model_factory(object):
     def __init__(self, model_name, attention_module, inputs, config_dict, is_training):
@@ -70,7 +70,7 @@ class model_factory(object):
         y_c_pboxes = np.expand_dims(y_center, axis=-1)  ## shape is (grid_h, grid_w, 1)
         x_c_pboxes = np.expand_dims(x_center, axis=-1)
 
-        shape = tf.shape(self.det_out)
+        shape = tf.shape(input=self.det_out)
         self.det_out = tf.reshape(self.det_out, shape=[-1, config.grid_cell_size[0],
                                                        config.grid_cell_size[1],
                                                        len(config.priori_bboxes), 4])
@@ -108,7 +108,7 @@ class model_factory(object):
 
 
 if __name__ == '__main__':
-    imgs = tf.placeholder(tf.float32, shape=(None, 224, 224, 3))
+    imgs = tf.compat.v1.placeholder(tf.float32, shape=(None, 224, 224, 3))
     net = model_factory(inputs=imgs, model_name="prioriboxes_mbn",
                         attention_module="se_block", is_training=True)
     net.get_output_for_test()

@@ -110,7 +110,7 @@ import functools
 
 import tensorflow as tf
 
-slim = tf.contrib.slim
+import tf_slim as slim
 
 # Conv and DepthSepConv namedtuple define layers of the MobileNet architecture
 # Conv defines 3x3 convolution layers
@@ -160,7 +160,7 @@ def _fixed_padding(inputs, kernel_size, rate=1):
   pad_total = [kernel_size_effective[0] - 1, kernel_size_effective[1] - 1]
   pad_beg = [pad_total[0] // 2, pad_total[1] // 2]
   pad_end = [pad_total[0] - pad_beg[0], pad_total[1] - pad_beg[1]]
-  padded_inputs = tf.pad(inputs, [[0, 0], [pad_beg[0], pad_end[0]],
+  padded_inputs = tf.pad(tensor=inputs, paddings=[[0, 0], [pad_beg[0], pad_end[0]],
                                   [pad_beg[1], pad_end[1]], [0, 0]])
   return padded_inputs
 
@@ -229,7 +229,7 @@ def mobilenet_v1_base(inputs,
   padding = 'SAME'
   if use_explicit_padding:
     padding = 'VALID'
-  with tf.variable_scope(scope, 'MobilenetV1', [inputs]):
+  with tf.compat.v1.variable_scope(scope, 'MobilenetV1', [inputs]):
     with slim.arg_scope([slim.conv2d, slim.separable_conv2d], padding=padding):
       # The current_stride variable keeps track of the output stride of the
       # activations, i.e., the running product of convolution strides up to the
@@ -354,7 +354,7 @@ def mobilenet_v1(inputs,
     raise ValueError('Invalid input tensor rank, expected 4, was: %d' %
                      len(input_shape))
 
-  with tf.variable_scope(scope, 'MobilenetV1', [inputs], reuse=reuse) as scope:
+  with tf.compat.v1.variable_scope(scope, 'MobilenetV1', [inputs], reuse=reuse) as scope:
     with slim.arg_scope([slim.batch_norm, slim.dropout],
                         is_training=is_training):
       net, end_points = mobilenet_v1_base(inputs, scope=scope,
@@ -432,8 +432,8 @@ def mobilenet_v1_arg_scope(is_training=True,
     batch_norm_params['is_training'] = is_training
 
   # Set weight_decay for weights in Conv and DepthSepConv layers.
-  weights_init = tf.truncated_normal_initializer(stddev=stddev)
-  regularizer = tf.contrib.layers.l2_regularizer(weight_decay)
+  weights_init = tf.compat.v1.truncated_normal_initializer(stddev=stddev)
+  regularizer = tf.keras.regularizers.l2(0.5 * (weight_decay))
   if regularize_depthwise:
     depthwise_regularizer = regularizer
   else:
@@ -450,7 +450,7 @@ def mobilenet_v1_arg_scope(is_training=True,
 
 import numpy as np
 if __name__ == "__main__":
-    imgs = tf.placeholder(shape=[None, 224, 224, 3], dtype=tf.float32)
+    imgs = tf.compat.v1.placeholder(shape=[None, 224, 224, 3], dtype=tf.float32)
     endpoints = mobilenet_v1(inputs=imgs, is_training=True)
     print('Total trainable parameters:%s' %
-                str(np.sum([np.prod(v.get_shape().as_list()) for v in tf.trainable_variables()])))
+                str(np.sum([np.prod(v.get_shape().as_list()) for v in tf.compat.v1.trainable_variables()])))
